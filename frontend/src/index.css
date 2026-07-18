@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-char-950 text-ink font-body antialiased;
+    background-image: radial-gradient(circle at 15% 10%, rgba(232, 84, 44, 0.06), transparent 40%);
+  }
+  ::selection {
+    @apply bg-ember/30 text-ink;
+  }
+  :focus-visible {
+    outline: 2px solid #E8542C;
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .contour-bg {
+    background-image: repeating-radial-gradient(circle at 50% 50%, transparent 0, transparent 38px, rgba(255,255,255,0.02) 39px);
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #2C2822;
+    border-radius: 999px;
+  }
+}
+
+/* Leaflet dark-mode tile filter so the map matches the ember/char palette */
+.leaflet-tile-pane {
+  filter: brightness(0.65) contrast(1.05) saturate(0.8) hue-rotate(-6deg);
+}
+.leaflet-container {
+  background: #100F0D !important;
+  font-family: 'IBM Plex Mono', monospace;
+}

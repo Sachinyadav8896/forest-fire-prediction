@@ -1,0 +1,79 @@
+version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: fire-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-changeme}
+      MYSQL_DATABASE: ${DB_NAME:-forest_fire_db}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-changeme}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # One-off job: `docker compose run --rm trainer` to (re)train models.
+  # Not part of the default `up` — models are expected to already exist
+  # in the shared `models_data` volume before the backend starts serving.
+  trainer:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.train
+    container_name: fire-trainer
+    volumes:
+      - models_data:/app/models/saved
+      - reports_data:/app/research
+      - ./dataset:/app/dataset
+    profiles: ["tools"]
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: fire-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD:-changeme}
+      DB_NAME: ${DB_NAME:-forest_fire_db}
+      OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY}
+      NASA_FIRMS_API_KEY: ${NASA_FIRMS_API_KEY}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      ALERT_FROM_EMAIL: ${ALERT_FROM_EMAIL}
+      FLASK_DEBUG: "false"
+    volumes:
+      - models_data:/app/models/saved
+      - reports_data:/app/research
+    ports:
+      - "5000:5000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: fire-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  mysql_data:
+  models_data:
+  reports_data:

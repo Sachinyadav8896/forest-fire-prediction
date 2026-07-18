@@ -1,0 +1,36 @@
+{
+  "model_name": "VotingEnsemble",
+  "metrics": {
+    "accuracy": 0.6372549019607843,
+    "precision": 0.6368981819037091,
+    "recall": 0.6372549019607843,
+    "f1_score": 0.6340297134975142,
+    "roc_auc": 0.6720679012345679,
+    "prediction_time_sec": 0.23709392547607422,
+    "false_negatives": 15,
+    "confusion_matrix": [
+      [
+        26,
+        22
+      ],
+      [
+        15,
+        39
+      ]
+    ],
+    "training_time_sec": 1.5014283657073975,
+    "cv_f1_mean": 0.5275882874080684,
+    "cv_f1_std": 0.04152653502512306
+  },
+  "feature_columns": [
+    "temperature",
+    "humidity",
+    "wind_speed",
+    "rainfall",
+    "fire_weather_index",
+    "heat_index",
+    "temp_humidity_ratio",
+    "wind_risk_score",
+    "historical_fire_frequency"
+  ]
+}

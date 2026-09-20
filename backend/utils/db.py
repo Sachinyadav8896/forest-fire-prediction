@@ -55,23 +55,41 @@ def get_cursor(dictionary: bool = True, commit: bool = False):
         conn.close()
 
 
-def upsert_location(latitude: float, longitude: float, city_name: str = None,
-                     region: str = None, country: str = None,
-                     elevation: float = None, slope: float = None) -> int:
+def upsert_location(
+    latitude: float,
+    longitude: float,
+    city_name: str = None,
+    region: str = None,
+    country: str = None,
+    elevation: float = None,
+    slope: float = None,
+) -> int:
     with get_cursor(commit=True) as cur:
         cur.execute(
-            """INSERT INTO locations (latitude, longitude, city_name, region, country, elevation, slope)
-               VALUES (%s,%s,%s,%s,%s,%s,%s)
-               ON DUPLICATE KEY UPDATE
-                   city_name=VALUES(city_name), region=VALUES(region),
-                   country=VALUES(country), elevation=VALUES(elevation), slope=VALUES(slope)""",
-            (latitude, longitude, city_name, region, country, elevation, slope),
+            """
+            INSERT INTO locations
+                (latitude, longitude, city_name, region, country, elevation, slope)
+            VALUES (%s,%s,%s,%s,%s,%s,%s)
+            ON DUPLICATE KEY UPDATE
+                id=LAST_INSERT_ID(id),
+                city_name=VALUES(city_name),
+                region=VALUES(region),
+                country=VALUES(country),
+                elevation=VALUES(elevation),
+                slope=VALUES(slope)
+            """,
+            (
+                latitude,
+                longitude,
+                city_name,
+                region,
+                country,
+                elevation,
+                slope,
+            ),
         )
-        cur.execute(
-            "SELECT id FROM locations WHERE latitude=%s AND longitude=%s",
-            (latitude, longitude),
-        )
-        return cur.fetchone()["id"]
+
+        return cur.lastrowid
 
 
 def insert_weather_snapshot(location_id: int, weather: dict) -> int:

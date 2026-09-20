@@ -144,17 +144,77 @@ def predict(raw_input: dict) -> dict:
 
 def _explain_single_prediction(model, X: np.ndarray, feature_columns: list):
     try:
-        explainer = shap.TreeExplainer(model)
-        shap_values = explainer.shap_values(X)
-        if isinstance(shap_values, list):
-            shap_values = shap_values[1]
-        row_shap = shap_values[0]
+        # Use the processed training dataset as a real SHAP background.
+        # This avoids explaining the input against itself, which produces
+        # zero SHAP values.
+        project_root = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "..")
+        )
+        data_path = os.path.join(
+            project_root,
+            "dataset",
+            "processed",
+            "fire_data_processed.csv",
+        )
+
+        background_df = pd.read_csv(data_path)
+
+        # Recreate the engineered features used by the model.
+        background_df = engineer_all_features(background_df)
+
+        # Keep exactly the features expected by the trained model.
+        for col in feature_columns:
+            if col not in background_df.columns:
+                background_df[col] = 0.0
+
+        background_df = background_df[feature_columns]
+
+        # Apply the same scaler used during model training.
+        artifacts = load_preprocess_artifacts()
+        background_df[feature_columns] = artifacts.scaler.transform(
+            background_df[feature_columns]
+        )
+
+        background = background_df.values.astype(float)
+
+        # Keep the SHAP calculation reasonably fast.
+        background = shap.sample(
+            background,
+            min(20, len(background)),
+            random_state=42,
+        )
+
+        def predict_fn(data):
+            return model.predict_proba(data)[:, 1]
+
+        # Model-agnostic SHAP explanation.
+        explainer = shap.Explainer(
+            predict_fn,
+            background,
+            algorithm="permutation",
+        )
+
+        shap_values = explainer(X)
+
+        row_shap = np.asarray(shap_values.values[0]).flatten()
+
     except Exception as e:
-        logger.warning(f"SHAP explanation failed, returning empty explanation: {e}")
+        logger.warning(
+            f"SHAP explanation failed, returning empty explanation: {e}"
+        )
         return [], []
 
     impacts = sorted(
-        zip(feature_columns, row_shap.tolist()), key=lambda t: abs(t[1]), reverse=True
+        zip(feature_columns, row_shap.tolist()),
+        key=lambda t: abs(t[1]),
+        reverse=True,
     )
-    top_features = [{"feature": f, "impact": round(v, 4)} for f, v in impacts[:5]]
-    return top_features, [round(v, 4) for v in row_shap.tolist()]
+
+    top_features = [
+        {"feature": f, "impact": round(v, 4)}
+        for f, v in impacts[:5]
+    ]
+
+    return top_features, [
+        round(v, 4) for v in row_shap.tolist()
+    ]

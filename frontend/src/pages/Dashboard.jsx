@@ -20,20 +20,24 @@ export default function Dashboard() {
   const [comparison, setComparison] = useState([]);
   const [focusLocation, setFocusLocation] = useState(null);
 
-  const refreshLists = useCallback(async () => {
-    try {
-      const [mapData, recentData] = await Promise.all([
-        getMapPredictions(), getRecentPredictions(30),
-      ]);
+  const refreshLists = useCallback(async (updateMap = true) => {
+  try {
+    const [mapData, recentData] = await Promise.all([
+      getMapPredictions(), getRecentPredictions(30),
+    ]);
+
+    if (updateMap) {
       setMapPredictions(mapData);
-      setRecent(recentData);
-    } catch {
-      // dashboards should stay usable even if history/map calls fail
     }
-  }, []);
+
+    setRecent(recentData);
+  } catch {
+    // dashboards should stay usable even if history/map calls fail
+  }
+}, []);
 
   useEffect(() => {
-    refreshLists();
+    refreshLists(false);
     getModelComparison().then(setComparison).catch(() => {});
     const interval = setInterval(refreshLists, 30000);
     return () => clearInterval(interval);
@@ -44,11 +48,26 @@ export default function Dashboard() {
     setError(null);
     try {
       const result = await predictLive(params);
-      setPrediction(result);
-      if (result.weather?.latitude) {
-        setFocusLocation([result.weather.latitude, result.weather.longitude]);
-      }
-      refreshLists();
+setPrediction(result);
+
+if (result.weather?.latitude && result.weather?.longitude) {
+  const currentPrediction = {
+    ...result,
+    id: `current-${Date.now()}`,
+    latitude: result.weather.latitude,
+    longitude: result.weather.longitude,
+    city_name: result.weather.city_name || params.city_name,
+    predicted_at: new Date().toISOString(),
+  };
+
+  setMapPredictions([currentPrediction]);
+  setFocusLocation([
+    result.weather.latitude,
+    result.weather.longitude,
+  ]);
+}
+
+refreshLists(false);
     } catch (e) {
       setError(extractErrorMessage(e));
     } finally {

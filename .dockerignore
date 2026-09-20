@@ -6,7 +6,7 @@
 **/dist
 **/*.log
 backend/logs
-models/saved/*.joblib
+
 research/shap/*.npy
 .env
 .env.*

@@ -15,7 +15,7 @@ frontend/dist/
 !.env.example
 
 # ML artifacts (regenerate via training pipeline, don't commit large binaries)
-models/saved/*.joblib
+
 research/shap/*.npy
 
 # Logs

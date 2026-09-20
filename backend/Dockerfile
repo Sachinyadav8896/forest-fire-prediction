@@ -21,6 +21,7 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 COPY config/ ./config/
 COPY backend/ ./backend/
 COPY dataset/ ./dataset/
+COPY models/ ./models/
 
 # Models are trained separately and mounted/copied in (see docker-compose volume)
 RUN mkdir -p models/saved research/reports research/shap backend/logs
